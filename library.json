@@ -1,0 +1,13 @@
+{
+    "name": "esp-mqtt-wrapper",
+    "keywords": "mqtt espressif esp-idf pubsubclient",
+    "description": "Mqtt wrapper for espressif mqtt client that mimics the pubsubclient library for easier porting of code.",
+    "repository":
+    {
+      "type": "git",
+      "url": ""
+    },
+    "frameworks": "arduino",
+    "platforms": "espressif32",
+    "version": "0.1"
+  }
