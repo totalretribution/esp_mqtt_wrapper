@@ -54,7 +54,7 @@
 #define MQTT_CALLBACK_SIGNATURE void (*message_cb)(char*, uint8_t*, unsigned int)
 #define MQTT_CALLBACK_STATUS_SIGNATURE void (*status_cb)(int32_t)
 
-class esp_mqtt : public Print {
+class esp_mqtt {
  public:
   esp_mqtt();
   esp_mqtt(IPAddress ip, uint16_t port);

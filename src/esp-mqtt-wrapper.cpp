@@ -7,7 +7,6 @@ esp_mqtt::esp_mqtt() {
   this->_state = MQTT_DISCONNECTED;
   setCallback(NULL);
   setStatusCallback(NULL);
-  this->bufferSize = 0;
   setBufferSize(MQTT_MAX_PACKET_SIZE);
   setKeepAlive(MQTT_KEEPALIVE);
   setSocketTimeout(MQTT_SOCKET_TIMEOUT);
@@ -18,7 +17,6 @@ esp_mqtt::esp_mqtt(IPAddress ip, uint16_t port) {
   setServer(ip, port);
   setCallback(NULL);
   setStatusCallback(NULL);
-  this->bufferSize = 0;
   setBufferSize(MQTT_MAX_PACKET_SIZE);
   setKeepAlive(MQTT_KEEPALIVE);
   setSocketTimeout(MQTT_SOCKET_TIMEOUT);
@@ -29,7 +27,6 @@ esp_mqtt::esp_mqtt(IPAddress ip, uint16_t port, MQTT_CALLBACK_SIGNATURE) {
   setServer(ip, port);
   setCallback(message_cb);
   setStatusCallback(NULL);
-  this->bufferSize = 0;
   setBufferSize(MQTT_MAX_PACKET_SIZE);
   setKeepAlive(MQTT_KEEPALIVE);
   setSocketTimeout(MQTT_SOCKET_TIMEOUT);
@@ -40,7 +37,6 @@ esp_mqtt::esp_mqtt(const char* domain, uint16_t port) {
   setServer(domain, port);
   setCallback(NULL);
   setStatusCallback(NULL);
-  this->bufferSize = 0;
   setBufferSize(MQTT_MAX_PACKET_SIZE);
   setKeepAlive(MQTT_KEEPALIVE);
   setSocketTimeout(MQTT_SOCKET_TIMEOUT);
@@ -51,7 +47,6 @@ esp_mqtt::esp_mqtt(const char* domain, uint16_t port, MQTT_CALLBACK_SIGNATURE) {
   setServer(domain, port);
   setCallback(message_cb);
   setStatusCallback(NULL);
-  this->bufferSize = 0;
   setBufferSize(MQTT_MAX_PACKET_SIZE);
   setKeepAlive(MQTT_KEEPALIVE);
   setSocketTimeout(MQTT_SOCKET_TIMEOUT);
@@ -98,12 +93,11 @@ esp_mqtt& esp_mqtt::setSocketTimeout(uint16_t timeout) {
 }
 
 boolean esp_mqtt::setBufferSize(uint16_t size) {
-  if (size == 0) {
+  if (size == 0)
     return false;
 
-    this->bufferSize = size;
-    return true;
-  }
+  this->bufferSize = size;
+  return true;
 }
 
 uint16_t esp_mqtt::getBufferSize() {
@@ -143,14 +137,44 @@ boolean esp_mqtt::connect(const char* id,
   if (connected())
     return false;
 
+  ESP_LOGI(TAG, "Connecting MQTT client");
+
   esp_mqtt_client_config_t mqtt_cfg;
-  // TODO: Build mqtt_cfg
-  if (strcmp(id, "") == 0) {
-    // TODO: Generate id
-    mqtt_cfg.client_id = id;
-  } else {
+  memset(&mqtt_cfg, 0, sizeof(esp_mqtt_client_config_t));
+  if (strlen(id) > 0) {
     mqtt_cfg.client_id = id;
   }
+
+  if (user != NULL) {
+    mqtt_cfg.username = user;
+  }
+
+  if (pass != NULL) {
+    mqtt_cfg.password = pass;
+  }
+
+  mqtt_cfg.lwt_topic = willTopic;
+  mqtt_cfg.lwt_msg = willMessage;
+  mqtt_cfg.lwt_qos = willQos;
+  mqtt_cfg.lwt_retain = willRetain;
+
+  if (domain != NULL) {
+    if (strstr(domain, "://") != NULL) {
+      mqtt_cfg.uri = domain;
+    } else {
+      mqtt_cfg.host = domain;
+      mqtt_cfg.transport = MQTT_TRANSPORT_OVER_TCP;
+      mqtt_cfg.port = this->port;
+    }
+  } else {
+    mqtt_cfg.host = this->ip.toString().c_str();
+    mqtt_cfg.transport = MQTT_TRANSPORT_OVER_TCP;
+    mqtt_cfg.port = this->port;
+  }
+
+  mqtt_cfg.keepalive = this->keepAlive;
+  mqtt_cfg.network_timeout_ms = this->socketTimeout;
+  mqtt_cfg.buffer_size = this->bufferSize;
 
   if (_mqtt_handle)
     esp_mqtt_client_destroy(_mqtt_handle);
@@ -160,10 +184,16 @@ boolean esp_mqtt::connect(const char* id,
 
   esp_mqtt_client_register_event(_mqtt_handle, MQTT_EVENT_ANY, esp_mqtt::s_handle_mqtt_event, this);
   esp_mqtt_client_start(_mqtt_handle);
+
+  return true;
 }
 
 void esp_mqtt::disconnect() {
-  // TODO: add implementation
+  ESP_LOGI(TAG, "Disconnecting MQTT client");
+  if (_mqtt_handle)
+    esp_mqtt_client_destroy(_mqtt_handle);
+  this->_state = MQTT_DISCONNECTED;
+  _mqtt_handle = NULL;
 }
 
 boolean esp_mqtt::publish(const char* topic, const char* payload) {
@@ -267,19 +297,24 @@ void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id,
   esp_mqtt_client_handle_t client = event->client;
   int msg_id;
   switch ((esp_mqtt_event_id_t)event_id) {
-    case MQTT_EVENT_DATA:
+    case MQTT_EVENT_DATA: {
       ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-      message_cb(event->topic, (uint8_t*)event->data, event->data_len);
+      char topic_str[event->topic_len];
+      memcpy(topic_str, event->topic, event->topic_len);
+      message_cb(topic_str, (uint8_t*)event->data, event->data_len);
       break;
+    }
     case MQTT_EVENT_CONNECTED:
       ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
       this->_state = MQTT_CONNECTED;
-      status_cb(event_id);
+      if (status_cb != nullptr)
+        status_cb(event_id);
       break;
     case MQTT_EVENT_DISCONNECTED:
       ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
       this->_state = MQTT_DISCONNECTED;
-      status_cb(event_id);
+      if (status_cb != nullptr)
+        status_cb(event_id);
       break;
     case MQTT_EVENT_SUBSCRIBED:
       ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
@@ -315,7 +350,8 @@ void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id,
         // ESP_LOGI(TAG, "Connection refused error: %d", event->error_handle->error_code);
         this->_state = MQTT_CONNECT_FAILED;
       }
-      status_cb(event_id);
+      if (status_cb != nullptr)
+        status_cb(event_id);
       break;
     default:
       ESP_LOGI(TAG, "Other event id:%d", event->event_id);
