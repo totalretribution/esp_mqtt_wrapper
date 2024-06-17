@@ -163,7 +163,7 @@ boolean esp_mqtt::connect(const char* id,
 }
 
 void esp_mqtt::disconnect() {
-    //TODO: add implementation
+  // TODO: add implementation
 }
 
 boolean esp_mqtt::publish(const char* topic, const char* payload) {
@@ -220,7 +220,7 @@ boolean esp_mqtt::unsubscribe(const char* topic) {
 }
 
 boolean esp_mqtt::loop() {
-    return connected();
+  return connected();
 }
 
 boolean esp_mqtt::connected() {
@@ -262,7 +262,7 @@ void esp_mqtt::s_handle_mqtt_event(void* event_handler_arg, esp_event_base_t eve
  * @param event_data The data for the event, esp_mqtt_event_handle_t.
  */
 void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id, void* event_data) {
-  ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
+  // ESP_LOGD(TAG, "Event dispatched from event loop base=%s, event_id=%" PRIi32 "", base, event_id);
   esp_mqtt_event_handle_t event = (esp_mqtt_event_handle_t)event_data;
   esp_mqtt_client_handle_t client = event->client;
   int msg_id;
@@ -312,7 +312,7 @@ void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id,
         log_error_if_nonzero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
         ESP_LOGI(TAG, "Last errno string (%s)", strerror(event->error_handle->esp_transport_sock_errno));
       } else if (event->error_handle->error_type == MQTT_ERROR_TYPE_CONNECTION_REFUSED) {
-        ESP_LOGI(TAG, "Connection refused error: %d", event->error_handle->error_code);
+        // ESP_LOGI(TAG, "Connection refused error: %d", event->error_handle->error_code);
         this->_state = MQTT_CONNECT_FAILED;
       }
       status_cb(event_id);
@@ -321,4 +321,8 @@ void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id,
       ESP_LOGI(TAG, "Other event id:%d", event->event_id);
       break;
   }
+}
+
+size_t esp_mqtt::write(uint8_t) {
+  return 0;
 }

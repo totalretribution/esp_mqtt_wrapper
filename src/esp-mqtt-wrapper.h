@@ -124,6 +124,7 @@ class esp_mqtt : public Print {
   void log_error_if_nonzero(const char* message, int error_code);
   static void s_handle_mqtt_event(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data);
   void mqtt_event_handler(esp_event_base_t event_base, int32_t event_id, void* event_data);
+  virtual size_t write(uint8_t);
 };
 
 #endif
