@@ -134,7 +134,6 @@ boolean esp_mqtt::connect(const char* id,
                           boolean willRetain,
                           const char* willMessage,
                           boolean cleanSession) {
-
   if (this->_state == MQTT_CONNECTED) {
     connect_called = true;
     return true;
@@ -147,6 +146,43 @@ boolean esp_mqtt::connect(const char* id,
 
   esp_mqtt_client_config_t mqtt_cfg;
   memset(&mqtt_cfg, 0, sizeof(esp_mqtt_client_config_t));
+
+#if defined(ESP_IDF_VERSION) && ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 1, 0)
+  if (strlen(id) > 0) {
+    mqtt_cfg.credentials.client_id = id;
+  }
+
+  if (user != NULL) {
+    mqtt_cfg.credentials.username = user;
+  }
+
+  if (pass != NULL) {
+    mqtt_cfg.credentials.authentication.password = pass;
+  }
+
+  mqtt_cfg.session.last_will.topic = willTopic;
+  mqtt_cfg.session.last_will.msg = willMessage;
+  mqtt_cfg.session.last_will.qos = willQos;
+  mqtt_cfg.session.last_will.retain = willRetain;
+
+  if (domain != NULL) {
+    if (strstr(domain, "://") != NULL) {
+      mqtt_cfg.broker.address.uri = domain;
+    } else {
+      mqtt_cfg.broker.address.hostname = domain;
+      mqtt_cfg.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
+      mqtt_cfg.broker.address.port = this->port;
+    }
+  } else {
+    mqtt_cfg.broker.address.hostname = this->ip.toString().c_str();
+    mqtt_cfg.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
+    mqtt_cfg.broker.address.port = this->port;
+  }
+
+  mqtt_cfg.session.keepalive = this->keepAlive;
+  mqtt_cfg.network.timeout_ms = this->socketTimeout * 1000;  // Needs to be in ms.
+  mqtt_cfg.buffer.size = this->bufferSize;
+#else
   if (strlen(id) > 0) {
     mqtt_cfg.client_id = id;
   }
@@ -179,8 +215,9 @@ boolean esp_mqtt::connect(const char* id,
   }
 
   mqtt_cfg.keepalive = this->keepAlive;
-  mqtt_cfg.network_timeout_ms = this->socketTimeout* 1000; // Needs to be in ms.
+  mqtt_cfg.network_timeout_ms = this->socketTimeout * 1000;  // Needs to be in ms.
   mqtt_cfg.buffer_size = this->bufferSize;
+#endif
 
   if (_mqtt_handle)
     esp_mqtt_client_destroy(_mqtt_handle);
