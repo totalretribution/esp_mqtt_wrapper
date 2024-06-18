@@ -50,6 +50,7 @@
 #define MQTT_CONNECT_UNAVAILABLE 3
 #define MQTT_CONNECT_BAD_CREDENTIALS 4
 #define MQTT_CONNECT_UNAUTHORIZED 5
+#define MQTT_CONNECTING 6
 
 #define MQTT_CALLBACK_SIGNATURE void (*message_cb)(char*, uint8_t*, unsigned int)
 #define MQTT_CALLBACK_STATUS_SIGNATURE void (*status_cb)(int32_t)
@@ -120,6 +121,7 @@ class esp_mqtt {
   MQTT_CALLBACK_SIGNATURE;
   MQTT_CALLBACK_STATUS_SIGNATURE;
   uint16_t bufferSize;
+  bool connect_called = false;
 
   void log_error_if_nonzero(const char* message, int error_code);
   static void s_handle_mqtt_event(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data);

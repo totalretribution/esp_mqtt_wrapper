@@ -134,10 +134,16 @@ boolean esp_mqtt::connect(const char* id,
                           boolean willRetain,
                           const char* willMessage,
                           boolean cleanSession) {
-  if (connected())
+
+  if (this->_state == MQTT_CONNECTED) {
+    connect_called = true;
+    return true;
+  }
+
+  if (_mqtt_handle)
     return false;
 
-  ESP_LOGI(TAG, "Connecting MQTT client");
+  ESP_LOGI(TAG, "Attempting to connect to MQTT client");
 
   esp_mqtt_client_config_t mqtt_cfg;
   memset(&mqtt_cfg, 0, sizeof(esp_mqtt_client_config_t));
@@ -173,19 +179,24 @@ boolean esp_mqtt::connect(const char* id,
   }
 
   mqtt_cfg.keepalive = this->keepAlive;
-  mqtt_cfg.network_timeout_ms = this->socketTimeout;
+  mqtt_cfg.network_timeout_ms = this->socketTimeout* 1000; // Needs to be in ms.
   mqtt_cfg.buffer_size = this->bufferSize;
 
   if (_mqtt_handle)
     esp_mqtt_client_destroy(_mqtt_handle);
 
-  if (!(_mqtt_handle = esp_mqtt_client_init(&mqtt_cfg)))
+  if (!(_mqtt_handle = esp_mqtt_client_init(&mqtt_cfg))) {
+    esp_mqtt_client_destroy(_mqtt_handle);
     return false;
+  }
 
   esp_mqtt_client_register_event(_mqtt_handle, MQTT_EVENT_ANY, esp_mqtt::s_handle_mqtt_event, this);
   esp_mqtt_client_start(_mqtt_handle);
+  _state = MQTT_CONNECTING;
+  if (status_cb != nullptr)
+    status_cb(this->_state);
 
-  return true;
+  return false;
 }
 
 void esp_mqtt::disconnect() {
@@ -254,7 +265,11 @@ boolean esp_mqtt::loop() {
 }
 
 boolean esp_mqtt::connected() {
-  return this->_state == MQTT_CONNECTED;
+  if (status_cb != nullptr)
+    return this->_state == MQTT_CONNECTED;
+  if (connect_called)
+    return this->_state == MQTT_CONNECTED;
+  return false;
 }
 
 int esp_mqtt::state() {
@@ -308,13 +323,14 @@ void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id,
       ESP_LOGI(TAG, "MQTT_EVENT_CONNECTED");
       this->_state = MQTT_CONNECTED;
       if (status_cb != nullptr)
-        status_cb(event_id);
+        status_cb(this->_state);
       break;
     case MQTT_EVENT_DISCONNECTED:
       ESP_LOGI(TAG, "MQTT_EVENT_DISCONNECTED");
       this->_state = MQTT_DISCONNECTED;
+      connect_called = false;
       if (status_cb != nullptr)
-        status_cb(event_id);
+        status_cb(this->_state);
       break;
     case MQTT_EVENT_SUBSCRIBED:
       ESP_LOGI(TAG, "MQTT_EVENT_SUBSCRIBED, msg_id=%d", event->msg_id);
@@ -342,6 +358,7 @@ void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id,
           _state = MQTT_CONNECT_UNAUTHORIZED;
         ESP_LOGI(TAG, "Connection Error String (%s)", strerror(event->error_handle->connect_return_code));
       } else if (event->error_handle->error_type == MQTT_ERROR_TYPE_TCP_TRANSPORT) {
+        this->_state = MQTT_CONNECT_FAILED;
         log_error_if_nonzero("reported from esp-tls", event->error_handle->esp_tls_last_esp_err);
         log_error_if_nonzero("reported from tls stack", event->error_handle->esp_tls_stack_err);
         log_error_if_nonzero("captured as transport's socket errno", event->error_handle->esp_transport_sock_errno);
@@ -351,7 +368,13 @@ void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id,
         this->_state = MQTT_CONNECT_FAILED;
       }
       if (status_cb != nullptr)
-        status_cb(event_id);
+        status_cb(this->_state);
+      break;
+    case MQTT_EVENT_BEFORE_CONNECT:
+      ESP_LOGI(TAG, "MQTT_EVENT_BEFORE_CONNECT");
+      break;
+    case MQTT_EVENT_DELETED:
+      ESP_LOGI(TAG, "MQTT_EVENT_DELETED");
       break;
     default:
       ESP_LOGI(TAG, "Other event id:%d", event->event_id);
