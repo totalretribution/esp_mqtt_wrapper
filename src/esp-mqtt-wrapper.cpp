@@ -56,6 +56,7 @@ esp_mqtt::~esp_mqtt() {}
 
 esp_mqtt& esp_mqtt::setServer(IPAddress ip, uint16_t port) {
   this->ip = ip;
+  strcpy(this->ip_str, this->ip.toString().c_str());
   this->port = port;
   this->domain = NULL;
   return *this;
@@ -174,7 +175,7 @@ boolean esp_mqtt::connect(const char* id,
       mqtt_cfg.broker.address.port = this->port;
     }
   } else {
-    mqtt_cfg.broker.address.hostname = this->ip.toString().c_str();
+    mqtt_cfg.broker.address.hostname = this->ip_str;
     mqtt_cfg.broker.address.transport = MQTT_TRANSPORT_OVER_TCP;
     mqtt_cfg.broker.address.port = this->port;
   }
@@ -209,7 +210,7 @@ boolean esp_mqtt::connect(const char* id,
       mqtt_cfg.port = this->port;
     }
   } else {
-    mqtt_cfg.host = this->ip.toString().c_str();
+    mqtt_cfg.host = = this->ip_str;
     mqtt_cfg.transport = MQTT_TRANSPORT_OVER_TCP;
     mqtt_cfg.port = this->port;
   }

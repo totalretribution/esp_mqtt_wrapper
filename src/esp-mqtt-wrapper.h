@@ -113,6 +113,7 @@ class esp_mqtt {
   const char* TAG = "esp-mqtt-wrapper";
   esp_mqtt_client_handle_t _mqtt_handle = NULL;
   IPAddress ip;
+  char ip_str[17];
   const char* domain;
   uint16_t port;
   int _state;
