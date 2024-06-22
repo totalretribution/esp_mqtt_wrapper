@@ -245,21 +245,25 @@ void esp_mqtt::disconnect() {
   _mqtt_handle = NULL;
 }
 
-boolean esp_mqtt::publish(const char* topic, const char* payload) {
-  return publish(topic, (const uint8_t*)payload, 0, false);
+boolean esp_mqtt::publish(const char* topic, const char* payload, boolean wait) {
+  return publish(topic, (const uint8_t*)payload, 0, false, wait);
 }
 
-boolean esp_mqtt::publish(const char* topic, const char* payload, boolean retained) {
-  return publish(topic, (const uint8_t*)payload, 0, retained);
+boolean esp_mqtt::publish(const char* topic, const char* payload, boolean retained, boolean wait) {
+  return publish(topic, (const uint8_t*)payload, 0, retained, wait);
 }
 
-boolean esp_mqtt::publish(const char* topic, const uint8_t* payload, unsigned int plength) {
-  return publish(topic, payload, plength, false);
+boolean esp_mqtt::publish(const char* topic, const uint8_t* payload, unsigned int plength, boolean wait) {
+  return publish(topic, payload, plength, false, wait);
 }
 
-boolean esp_mqtt::publish(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained) {
-  int msg_id = esp_mqtt_client_publish(_mqtt_handle, topic, (const char*)payload, plength, 1, retained);
-  if (msg_id != -1) {
+boolean esp_mqtt::publish(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained, boolean wait) {
+  int msg_id = ESP_FAIL;
+  if (wait)
+    msg_id = esp_mqtt_client_publish(_mqtt_handle, topic, (const char*)payload, plength, 1, retained);
+  else
+    msg_id = esp_mqtt_client_enqueue(_mqtt_handle, topic, (const char*)payload, plength, 1, retained);
+  if (msg_id != ESP_FAIL) {
     ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
   } else {
     ESP_LOGI(TAG, "sent publish unsuccessful, msg_id=%d", msg_id);
@@ -267,12 +271,12 @@ boolean esp_mqtt::publish(const char* topic, const uint8_t* payload, unsigned in
   return msg_id != ESP_FAIL;
 }
 
-boolean esp_mqtt::publish_P(const char* topic, const char* payload, boolean retained) {
-  return publish(topic, (const uint8_t*)payload, 0, retained);
+boolean esp_mqtt::publish_P(const char* topic, const char* payload, boolean retained, boolean wait) {
+  return publish(topic, (const uint8_t*)payload, 0, retained, wait);
 }
 
-boolean esp_mqtt::publish_P(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained) {
-  return publish(topic, payload, plength, retained);
+boolean esp_mqtt::publish_P(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained, boolean wait) {
+  return publish(topic, payload, plength, retained, wait);
 }
 
 boolean esp_mqtt::subscribe(const char* topic) {
