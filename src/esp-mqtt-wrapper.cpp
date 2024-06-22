@@ -262,7 +262,7 @@ boolean esp_mqtt::publish(const char* topic, const uint8_t* payload, unsigned in
   if (wait)
     msg_id = esp_mqtt_client_publish(_mqtt_handle, topic, (const char*)payload, plength, 1, retained);
   else
-    msg_id = esp_mqtt_client_enqueue(_mqtt_handle, topic, (const char*)payload, plength, 1, retained);
+    msg_id = esp_mqtt_client_enqueue(_mqtt_handle, topic, (const char*)payload, plength, 1, retained, true);
   if (msg_id != ESP_FAIL) {
     ESP_LOGI(TAG, "sent publish successful, msg_id=%d", msg_id);
   } else {
