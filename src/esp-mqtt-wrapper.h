@@ -72,6 +72,10 @@ class esp_mqtt {
   esp_mqtt& setStatusCallback(MQTT_CALLBACK_STATUS_SIGNATURE);
   esp_mqtt& setKeepAlive(uint16_t keepAlive);
   esp_mqtt& setSocketTimeout(uint16_t timeout);
+  
+  esp_mqtt& setRootCA(const char * ca);
+  esp_mqtt& setClientCertificate(const char * cert);
+  esp_mqtt& setClientKey(const char * key);
 
   boolean setBufferSize(uint16_t size);
   uint16_t getBufferSize();
@@ -96,11 +100,11 @@ class esp_mqtt {
                   boolean cleanSession);
   void disconnect();
   boolean publish(const char* topic, const char* payload, boolean wait = true);
-  boolean publish(const char* topic, const char* payload, boolean retained,boolean wait = true);
-  boolean publish(const char* topic, const uint8_t* payload, unsigned int plength,boolean wait = true);
-  boolean publish(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained,boolean wait = true);
-  boolean publish_P(const char* topic, const char* payload, boolean retained,boolean wait = true);
-  boolean publish_P(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained,boolean wait = true);
+  boolean publish(const char* topic, const char* payload, boolean retained, boolean wait = true);
+  boolean publish(const char* topic, const uint8_t* payload, unsigned int plength, boolean wait = true);
+  boolean publish(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained, boolean wait = true);
+  boolean publish_P(const char* topic, const char* payload, boolean retained, boolean wait = true);
+  boolean publish_P(const char* topic, const uint8_t* payload, unsigned int plength, boolean retained, boolean wait = true);
 
   boolean subscribe(const char* topic);
   boolean subscribe(const char* topic, uint8_t qos);
@@ -115,14 +119,17 @@ class esp_mqtt {
   IPAddress ip;
   char ip_str[17];
   const char* domain;
-  uint16_t port;
-  int _state;
+  uint32_t port;
+  int8_t _state;
   uint16_t keepAlive;
   uint16_t socketTimeout;
   MQTT_CALLBACK_SIGNATURE;
   MQTT_CALLBACK_STATUS_SIGNATURE;
   uint16_t bufferSize;
   bool connect_called = false;
+  const char* root_ca = NULL;
+  const char* client_cert = NULL;
+  const char* client_key = NULL;
 
   void log_error_if_nonzero(const char* message, int error_code);
   static void s_handle_mqtt_event(void* event_handler_arg, esp_event_base_t event_base, int32_t event_id, void* event_data);

@@ -93,6 +93,21 @@ esp_mqtt& esp_mqtt::setSocketTimeout(uint16_t timeout) {
   return *this;
 }
 
+esp_mqtt& esp_mqtt::setRootCA(const char* ca) {
+  this->root_ca = ca;
+  return *this;
+}
+
+esp_mqtt& esp_mqtt::setClientCertificate(const char* cert) {
+  this->client_cert = cert;
+  return *this;
+}
+
+esp_mqtt& esp_mqtt::setClientKey(const char* key) {
+  this->client_key = key;
+  return *this;
+}
+
 boolean esp_mqtt::setBufferSize(uint16_t size) {
   if (size == 0)
     return false;
@@ -183,6 +198,15 @@ boolean esp_mqtt::connect(const char* id,
   mqtt_cfg.session.keepalive = this->keepAlive;
   mqtt_cfg.network.timeout_ms = this->socketTimeout * 1000;  // Needs to be in ms.
   mqtt_cfg.buffer.size = this->bufferSize;
+
+  if (this->root_ca != NULL)
+    mqtt_cfg.broker.verification.certificate = root_ca;
+
+  if (this->client_cert != NULL)
+    mqtt_cfg.credentials.authentication.certificate = this->client_cert;
+
+  if (this->client_key != NULL)
+    mqtt_cfg.credentials.authentication.key = this->client_key;
 #else
   if (strlen(id) > 0) {
     mqtt_cfg.client_id = id;
@@ -218,6 +242,15 @@ boolean esp_mqtt::connect(const char* id,
   mqtt_cfg.keepalive = this->keepAlive;
   mqtt_cfg.network_timeout_ms = this->socketTimeout * 1000;  // Needs to be in ms.
   mqtt_cfg.buffer_size = this->bufferSize;
+
+  if (this->root_ca != NULL)
+    mqtt_cfg.cert_pem = root_ca;
+
+  if (this->client_cert != NULL)
+    mqtt_cfg.client_cert_pem = this->client_cert;
+
+  if (this->client_key != NULL)
+    mqtt_cfg.client_key_pem = this->client_key;
 #endif
 
   if (_mqtt_handle)

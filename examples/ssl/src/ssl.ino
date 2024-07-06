@@ -2,13 +2,22 @@
 #include "WiFi.h"
 #include "esp-mqtt-wrapper.h"
 
-// #define USE_STATUS_CALLBACK
-
 // Update these with values suitable for your network.
 
 const char* ssid = "........";
 const char* password = "........";
-const char* mqtt_server = "broker.mqtt-dashboard.com";
+const char* mqtt_server = "mqtts://test.mosquitto.org:8884";
+const char* out_topic = "123456789/outTopic";
+const char* in_topic = "123456789/inTopic";
+
+extern const uint8_t root_ca_pem_start[] asm("_binary_src_certs_root_ca_crt_start");
+extern const uint8_t root_ca_pem_end[] asm("_binary_src_certs_root_ca_crt_end");
+
+extern const uint8_t certificate_pem_crt_start[] asm("_binary_src_certs_certificate_crt_start");
+extern const uint8_t certificate_pem_crt_end[] asm("_binary_src_certs_certificate_crt_end");
+
+extern const uint8_t private_pem_key_start[] asm("_binary_src_certs_private_key_start");
+extern const uint8_t private_pem_key_end[] asm("_binary_src_certs_private_key_end");
 
 esp_mqtt client;
 unsigned long lastMsg = 0;
@@ -39,11 +48,10 @@ void setup_wifi() {
   Serial.println(WiFi.localIP());
 }
 
-#ifdef USE_STATUS_CALLBACK
 void statusCallback(int32_t status) {
   if (status == MQTT_CONNECTED) {
-    client.publish("outTopic", "hello world");
-    client.subscribe("inTopic");
+    client.publish(out_topic, "hello world");
+    client.subscribe(in_topic);
     return;
   }
   if (status == MQTT_DISCONNECTED) {
@@ -56,7 +64,6 @@ void statusCallback(int32_t status) {
     return;
   }
 }
-#endif
 
 void callback(char* topic, byte* payload, unsigned int length) {
   Serial.print("Message arrived [");
@@ -79,52 +86,21 @@ void callback(char* topic, byte* payload, unsigned int length) {
   }
 }
 
-#ifndef USE_STATUS_CALLBACK
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
-    String clientId = "ESP8266Client-";
-    clientId += String(random(0xffff), HEX);
-    // Attempt to connect
-    if (client.connect(clientId.c_str())) {
-      Serial.println("connected");
-      // Once connected, publish an announcement...
-      client.publish("outTopic", "hello world");
-      // ... and resubscribe
-      client.subscribe("inTopic");
-    } else {
-      Serial.print("failed, rc=");
-      Serial.print(client.state());
-      Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
-      delay(5000);
-    }
-  }
-}
-#endif
-
 void setup() {
-  pinMode(BUILTIN_LED, OUTPUT);     // Initialize the BUILTIN_LED pin as an output
+  pinMode(BUILTIN_LED, OUTPUT);  // Initialize the BUILTIN_LED pin as an output
   Serial.begin(115200);
   Serial.println("Setup...");
   setup_wifi();
   client.setServer(mqtt_server, 1883);
   client.setCallback(callback);
-#ifdef USE_STATUS_CALLBACK
   client.setStatusCallback(statusCallback);
+  client.setRootCA((const char*)root_ca_pem_start);
+  client.setClientCertificate((const char*)certificate_pem_crt_start);
+  client.setClientKey((const char*)private_pem_key_start);
   client.connect("");
-#endif
 }
 
 void loop() {
-#ifndef USE_STATUS_CALLBACK
-  if (!client.connected()) {
-    reconnect();
-  }
-  client.loop();
-#endif
   unsigned long now = millis();
   if (now - lastMsg > 2000) {
     lastMsg = now;
@@ -133,7 +109,7 @@ void loop() {
       snprintf(msg, MSG_BUFFER_SIZE, "hello world #%ld", value);
       Serial.print("Publish message: ");
       Serial.println(msg);
-      client.publish("outTopic", msg);
+      client.publish(out_topic, msg);
     }
   }
 }
