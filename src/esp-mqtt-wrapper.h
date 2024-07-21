@@ -52,8 +52,8 @@
 #define MQTT_CONNECT_UNAUTHORIZED 5
 #define MQTT_CONNECTING 6
 
-#define MQTT_CALLBACK_SIGNATURE void (*message_cb)(char*, uint8_t*, unsigned int)
-#define MQTT_CALLBACK_STATUS_SIGNATURE void (*status_cb)(int32_t)
+#define MQTT_CALLBACK_SIGNATURE std::function<void(char*, uint8_t*, unsigned int) > message_cb
+#define MQTT_CALLBACK_STATUS_SIGNATURE std::function<void(int32_t) > status_cb
 
 class esp_mqtt {
  public:
