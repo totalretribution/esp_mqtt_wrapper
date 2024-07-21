@@ -234,7 +234,7 @@ boolean esp_mqtt::connect(const char* id,
       mqtt_cfg.port = this->port;
     }
   } else {
-    mqtt_cfg.host = = this->ip_str;
+    mqtt_cfg.host = this->ip_str;
     mqtt_cfg.transport = MQTT_TRANSPORT_OVER_TCP;
     mqtt_cfg.port = this->port;
   }
