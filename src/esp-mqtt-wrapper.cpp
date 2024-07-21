@@ -389,8 +389,9 @@ void esp_mqtt::mqtt_event_handler(esp_event_base_t event_base, int32_t event_id,
   switch ((esp_mqtt_event_id_t)event_id) {
     case MQTT_EVENT_DATA: {
       ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-      char topic_str[event->topic_len];
+      char topic_str[event->topic_len+1];
       memcpy(topic_str, event->topic, event->topic_len);
+      topic_str[event->topic_len] = '\0'; // Add the null terminator
       message_cb(topic_str, (uint8_t*)event->data, event->data_len);
       break;
     }
