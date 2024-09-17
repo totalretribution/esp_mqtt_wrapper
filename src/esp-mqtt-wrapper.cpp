@@ -67,6 +67,11 @@ esp_mqtt& esp_mqtt::setServer(uint8_t* ip, uint16_t port) {
   return setServer(addr, port);
 }
 
+esp_mqtt& esp_mqtt::setServer(const char* domain) {
+  this->domain = domain;
+  return *this;
+}
+
 esp_mqtt& esp_mqtt::setServer(const char* domain, uint16_t port) {
   this->domain = domain;
   this->port = port;

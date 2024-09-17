@@ -67,6 +67,7 @@ class esp_mqtt {
 
   esp_mqtt& setServer(IPAddress ip, uint16_t port);
   esp_mqtt& setServer(uint8_t* ip, uint16_t port);
+  esp_mqtt& setServer(const char* domain);
   esp_mqtt& setServer(const char* domain, uint16_t port);
   esp_mqtt& setCallback(MQTT_CALLBACK_SIGNATURE);
   esp_mqtt& setStatusCallback(MQTT_CALLBACK_STATUS_SIGNATURE);
